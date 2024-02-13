@@ -48,7 +48,7 @@ public class SqliteQueryRunner
         queryRunner.installPlugin(new SqlitePlugin());
 
         Map<String, String> connectorProperties = Map.of(
-                "connection-url", "jdbc:h2:mem:test;init=CREATE TABLE IF NOT EXISTS TEST AS SELECT * FROM (VALUES (1, 'one'), (2, 'two')) AS t(id, name)",
+                "connection-url", "jdbc:sqlite:sqlite.db",
                 "connection-user", "test",
                 "connection-password", "");
         queryRunner.createCatalog(
@@ -70,6 +70,6 @@ public class SqliteQueryRunner
 
         Logger log = Logger.get(SqliteQueryRunner.class);
         log.info("======== SERVER STARTED ========");
-        log.info("\n====\n%s\n====", queryRunner.getCoordinator().getBaseUrl());
+        log.info("\n====\n%s\n====", ((DistributedQueryRunner) queryRunner).getCoordinator().getBaseUrl());
     }
 }

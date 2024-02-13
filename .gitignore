@@ -25,3 +25,6 @@ replay_pid*
 
 # intellij
 .idea
+
+# build
+target/

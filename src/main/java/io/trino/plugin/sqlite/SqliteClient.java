@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.trino.plugin.example;
+package io.trino.plugin.sqlite;
 
 import com.google.inject.Inject;
 import io.trino.plugin.base.mapping.IdentifierMapping;
@@ -25,14 +25,22 @@ import io.trino.plugin.jdbc.WriteMapping;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
+import io.trino.spi.connector.SchemaTableName;
+import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.CharType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
+import org.weakref.jmx.$internal.guava.collect.ImmutableList;
 
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
+import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_ERROR;
 import static io.trino.plugin.jdbc.PredicatePushdownController.DISABLE_PUSHDOWN;
 import static io.trino.plugin.jdbc.StandardColumnMappings.bigintColumnMapping;
 import static io.trino.plugin.jdbc.StandardColumnMappings.bigintWriteFunction;
@@ -64,7 +72,7 @@ public class SqliteClient
         extends BaseJdbcClient
 {
     @Inject
-    public ExampleClient(
+    public SqliteClient(
             BaseJdbcConfig config,
             ConnectionFactory connectionFactory,
             QueryBuilder queryBuilder,
@@ -172,5 +180,41 @@ public class SqliteClient
                 varcharReadFunction(varcharType),
                 varcharWriteFunction(),
                 DISABLE_PUSHDOWN);
+    }
+
+    @Override
+    public Collection<String> listSchemas(Connection connection)
+    {
+        return ImmutableList.of("main");
+    }
+
+    @Override
+    public List<SchemaTableName> getTableNames(ConnectorSession session, Optional<String> schema)
+    {
+        if (schema.isEmpty() || !schema.get().equals("main")) {
+            throw new IllegalArgumentException("Only 'main' schema is supported");
+        }
+
+        try (Connection connection = connectionFactory.openConnection(session)) {
+            if (!filterSchema(schema.get())) {
+                return ImmutableList.of();
+            }
+
+            try (ResultSet resultSet = getTables(connection, schema, Optional.empty())) {
+                ImmutableList.Builder<SchemaTableName> list = ImmutableList.builder();
+                while (resultSet.next()) {
+                    String remoteSchemaFromResultSet = getTableSchemaName(resultSet);
+                    String tableSchema = schema.get();
+                    String tableName = getIdentifierMapping().fromRemoteTableName(remoteSchemaFromResultSet, resultSet.getString("TABLE_NAME"));
+                    if (filterSchema(tableSchema)) {
+                        list.add(new SchemaTableName(tableSchema, tableName));
+                    }
+                }
+                return list.build();
+            }
+        }
+        catch (SQLException e) {
+            throw new TrinoException(JDBC_ERROR, e);
+        }
     }
 }
