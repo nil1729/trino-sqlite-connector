@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.sqlite;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.plugin.base.mapping.IdentifierMapping;
 import io.trino.plugin.jdbc.BaseJdbcClient;
@@ -26,11 +27,9 @@ import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.connector.SchemaTableName;
-import io.trino.spi.security.ConnectorIdentity;
 import io.trino.spi.type.CharType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
-import org.weakref.jmx.$internal.guava.collect.ImmutableList;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -197,7 +196,7 @@ public class SqliteClient
 
         try (Connection connection = connectionFactory.openConnection(session)) {
             if (!filterSchema(schema.get())) {
-                return ImmutableList.of();
+                return List.of();
             }
 
             try (ResultSet resultSet = getTables(connection, schema, Optional.empty())) {

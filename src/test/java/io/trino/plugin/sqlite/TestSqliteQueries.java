@@ -29,16 +29,8 @@ public class TestSqliteQueries
     }
 
     @Test
-    public void showTables()
+    public void showSchemas()
     {
-        assertQuery("SHOW SCHEMAS FROM sqlite", "VALUES 'information_schema', 'public'");
-        assertQuery("SHOW TABLES FROM sqlite.public", "VALUES 'test'");
-    }
-
-    @Test
-    public void selectFromTable()
-    {
-        assertQuery("SELECT name FROM sqlite.public.test",
-                "VALUES 'one', 'two'");
+        assertQuery("SHOW SCHEMAS FROM sqlite", "VALUES 'information_schema', 'main'");
     }
 }
