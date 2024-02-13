@@ -16,13 +16,7 @@ package io.trino.plugin.sqlite;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import io.trino.plugin.base.mapping.IdentifierMapping;
-import io.trino.plugin.jdbc.BaseJdbcClient;
-import io.trino.plugin.jdbc.BaseJdbcConfig;
-import io.trino.plugin.jdbc.ColumnMapping;
-import io.trino.plugin.jdbc.ConnectionFactory;
-import io.trino.plugin.jdbc.JdbcTypeHandle;
-import io.trino.plugin.jdbc.QueryBuilder;
-import io.trino.plugin.jdbc.WriteMapping;
+import io.trino.plugin.jdbc.*;
 import io.trino.plugin.jdbc.logging.RemoteQueryModifier;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorSession;
@@ -39,6 +33,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import static com.google.common.base.Verify.verify;
 import static io.trino.plugin.jdbc.JdbcErrorCode.JDBC_ERROR;
 import static io.trino.plugin.jdbc.PredicatePushdownController.DISABLE_PUSHDOWN;
 import static io.trino.plugin.jdbc.StandardColumnMappings.bigintColumnMapping;
@@ -215,5 +210,20 @@ public class SqliteClient
         catch (SQLException e) {
             throw new TrinoException(JDBC_ERROR, e);
         }
+    }
+
+    @Override
+    public Connection getConnection(ConnectorSession session, JdbcSplit split, JdbcTableHandle tableHandle) throws SQLException
+    {
+        verify(tableHandle.getAuthorization().isEmpty(), "Unexpected authorization is required for table: %s".formatted(tableHandle));
+        Connection connection = connectionFactory.openConnection(session);
+        try {
+            connection.setReadOnly(false);
+        }
+        catch (SQLException e) {
+            connection.close();
+            throw e;
+        }
+        return connection;
     }
 }
